@@ -1,0 +1,59 @@
+input:
+  source: sample_video.mp4
+  buffer_size: 1
+  reconnect: true
+  fps: 30
+yolo:
+  model_path: models/yolov8n.onnx
+  device: cpu
+  conf: 0.4
+  iou: 0.45
+  input_size: 640
+  fp16: false
+tracking:
+  max_age: 30
+  min_hits: 3
+  iou_threshold: 0.3
+reid:
+  enabled: false
+  model_path: models/face_recognition.onnx
+  similarity: 0.6
+  every_n_frames: 5
+counting:
+  mode: simple
+  lines:
+  - name: entry
+    coords:
+    - 0
+    - 360
+    - 1280
+    - 360
+    direction: vertical
+  doors:
+    door1:
+      line_A:
+      - 200
+      - 300
+      - 800
+      - 300
+      line_B:
+      - 200
+      - 500
+      - 800
+      - 500
+logging:
+  enabled: true
+  log_file: logs/passenger_log.csv
+  format: csv
+  log_events: true
+server:
+  host: 0.0.0.0
+  port: 5000
+  debug: false
+  enable_websocket: true
+display:
+  show_video: true
+  show_boxes: true
+  show_lines: true
+  show_counts: true
+  window_name: Passenger Counter

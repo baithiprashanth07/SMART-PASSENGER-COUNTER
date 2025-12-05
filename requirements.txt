@@ -1,0 +1,24 @@
+# Core Dependencies
+opencv-python
+numpy
+pyyaml
+
+# ONNX Runtime
+onnxruntime
+# For GPU support, use instead:
+# onnxruntime-gpu>=1.16.0
+
+# Tracking
+filterpy
+scipy
+
+# Web Server
+flask
+flask-socketio
+flask-cors
+
+# Optional: For auto-tuning
+# scikit-learn
+
+# Optional: For database logging
+# sqlalchemy

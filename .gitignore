@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+logs/
+models/*.onnx
+*.pt
+*.mp4
+.env
+.gemini/

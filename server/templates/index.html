@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Passenger Analytics Dashboard</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            background: #0d0d0d;
+            color: #fff;
+            font-family: Arial;
+        }
+
+        header {
+            padding: 20px;
+            text-align: center;
+            background: #141414;
+            font-size: 28px;
+            font-weight: bold;
+            border-bottom: 2px solid #222;
+        }
+
+        #main-container {
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        #video-section {
+            flex: 2;
+        }
+
+        #video-section img {
+            width: 100%;
+            border-radius: 10px;
+            border: 2px solid #222;
+        }
+
+        #info-section {
+            flex: 1;
+            background: #141414;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #222;
+        }
+
+        .door-card {
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            background: #1f1f1f;
+            border-left: 4px solid #4caf50;
+        }
+
+        canvas {
+            background: #1b1b1b;
+            padding: 10px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #2979ff;
+            border: none;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        select {
+            padding: 10px;
+            border-radius: 6px;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        #fps {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>🚍 Smart Passenger Counting Dashboard</header>
+
+    <div id="main-container">
+
+        <!-- VIDEO -->
+        <div id="video-section">
+            <img src="/video" id="liveVideo" />
+            <div id="fps">FPS: --</div>
+        </div>
+
+        <!-- SIDE INFO -->
+        <div id="info-section">
+            <h2>Door Statistics</h2>
+            <div id="door-stats"></div>
+
+            <h2>Controls</h2>
+
+            <button onclick="resetCounters()">Reset Counters</button>
+
+            <h3>Change Camera Source</h3>
+            <select id="cameraSource">
+                <option value="rtsp://your-camera-stream">RTSP Camera</option>
+                <option value="0">Webcam</option>
+                <option value="sample.mp4">Local Video File</option>
+            </select>
+            <button onclick="changeSource()">Apply Source</button>
+        </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div style="padding: 20px;">
+        <canvas id="chartEnterExit" height="120"></canvas>
+        <canvas id="chartOccupancy" height="120"></canvas>
+    </div>
+
+    <script src="/static/dashboard.js"></script>
+
+</body>
+
+</html>
