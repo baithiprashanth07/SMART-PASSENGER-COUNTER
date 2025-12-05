@@ -1,5 +1,5 @@
 # Core Dependencies
-opencv-python
+opencv-python-headless
 numpy
 pyyaml
 
