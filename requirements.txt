@@ -19,6 +19,6 @@ flask-cors
 
 # Optional: For auto-tuning
 # scikit-learn
-
+eventlet
 # Optional: For database logging
 # sqlalchemy
