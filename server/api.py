@@ -233,11 +233,14 @@ def status():
     })
 
 if __name__ == "__main__":
-    # Start frame capture thread
     t = threading.Thread(target=capture_frames, daemon=True)
     t.start()
 
-    # Start Flask-SocketIO server
-    # Note: socketio.run handles the web server
     print("🚀 Starting Smart Passenger Counter Server on http://localhost:5000")
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
+    socketio.run(
+        app,
+        host='0.0.0.0',
+        port=5000,
+        debug=False,
+        allow_unsafe_werkzeug=True
+    )
