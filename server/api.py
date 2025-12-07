@@ -3,24 +3,27 @@ import os
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from flask import Flask, Response, jsonify
+from flask import Flask, Response, jsonify, render_template, request
 import threading
 import cv2
+import time
+import numpy as np
 from collections import defaultdict
+
+# Import pipeline components
+# You may need to ensure these files exist and are correct; based on file list they do.
 from models.detection_pipeline import DetectionPipeline
 from core.passenger_counter import PassengerCounter
 from core.logger import Logger
-from core.utils import draw_boxes
+from server.websocket_manager import socketio, send_realtime_update, send_detection_update, send_fps_update
 
 app = Flask(__name__)
+# Initialize SocketIO with this app
+socketio.init_app(app)
 
 # Global variables
 output_frame = None
 lock = threading.Lock()
-
-# Video source (RTSP, webcam, or video file)
-video_source = 0  # 0 for webcam, change to video path or RTSP URL
-cap = None
 
 # Initialize components with error handling
 pipeline = None
@@ -37,9 +40,10 @@ except Exception as e:
     print("Running in demo mode without detection...")
 
 # Try to open video capture
+cap = None
 from core.input_reader import InputReader
 try:
-    # Force live camera
+    # Force live camera or use config default
     source = 0
     # source = "sample_video.mp4" if os.path.exists("sample_video.mp4") else 0
     
@@ -57,7 +61,6 @@ except Exception as e:
 # Real-time analytics
 analytics_data = defaultdict(int)
 
-
 def capture_frames():
     global output_frame, lock, analytics_data
     
@@ -68,13 +71,13 @@ def capture_frames():
         print("⚠️  No video source available - Running in DEMO MODE with generated frames")
     
     frame_count = 0
+    fps_start_time = cv2.getTickCount()
     
     while True:
         try:
             # Get frame from webcam or generate demo frame
             if use_demo_mode:
                 # Generate a demo frame (640x480 with text)
-                import numpy as np
                 frame = np.zeros((480, 640, 3), dtype=np.uint8)
                 frame[:] = (50, 50, 50)  # Dark gray background
                 
@@ -89,7 +92,6 @@ def capture_frames():
                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (100, 200, 100), 1)
                 
                 frame_count += 1
-                import time
                 time.sleep(0.033)  # ~30 FPS
             else:
                 # Use InputReader
@@ -101,7 +103,6 @@ def capture_frames():
                         use_demo_mode = True
                         continue
                     # Buffer empty, wait a bit
-                    import time
                     time.sleep(0.001)
                     continue
 
@@ -125,7 +126,26 @@ def capture_frames():
             analytics_data["OUT"] += out_count
             analytics_data["total"] = analytics_data["IN"] - analytics_data["OUT"]
 
-            # Draw bounding boxes and info
+            # WebSocket Updates - Send periodically
+            if frame_count % 5 == 0: 
+                send_realtime_update({
+                    "IN": analytics_data["IN"], 
+                    "OUT": analytics_data["OUT"], 
+                    "total": analytics_data["total"]
+                })
+                # Send detections count if needed
+                send_detection_update(len(boxes))
+
+            # FPS Calculation
+            if frame_count % 30 == 0:
+                fps_end_time = cv2.getTickCount()
+                time_diff = (fps_end_time - fps_start_time) / cv2.getTickFrequency()
+                if time_diff > 0:
+                    fps = 30 / time_diff
+                    send_fps_update(fps)
+                fps_start_time = cv2.getTickCount()
+
+            # Draw bounding boxes and info for video stream
             annotated_frame = frame.copy()
             if len(boxes) > 0:
                 from core.utils import draw_boxes, draw_counting_info
@@ -148,6 +168,8 @@ def capture_frames():
             # Update frame for streaming
             with lock:
                 output_frame = annotated_frame
+            
+            frame_count += 1
                 
         except Exception as e:
             print(f"⚠️  Frame capture error: {e}")
@@ -155,40 +177,67 @@ def capture_frames():
             traceback.print_exc()
             continue
 
-
 def generate_stream():
     global output_frame, lock
     while True:
         with lock:
             if output_frame is None:
+                time.sleep(0.01)
                 continue
             ret, buffer = cv2.imencode('.jpg', output_frame)
             frame_bytes = buffer.tobytes()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
 
-
 @app.route('/')
 def index():
-    return jsonify({"message": "Smart Passenger Counting API Running"})
-
+    # Serve the dashboard HTML
+    return render_template('index.html')
 
 @app.route('/video_feed')
 def video_feed():
     return Response(generate_stream(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
-
-@app.route('/analytics')
+@app.route('/api/analytics')
 def analytics():
     """Return real-time passenger analytics"""
     return jsonify(analytics_data)
 
+@app.route('/api/reset', methods=['POST'])
+def reset():
+    global analytics_data
+    analytics_data = defaultdict(int)
+    # Reset internal counters if method exists
+    if hasattr(counter, 'reset'):
+        counter.reset()
+    return jsonify({"status": "success", "message": "Counters reset"})
+
+@app.route('/api/change_source', methods=['POST'])
+def change_source():
+    # Placeholder for change source logic
+    try:
+        data = request.json
+        source = data.get('source')
+        print(f"Requested source change to: {source} (Not implemented fully)")
+        return jsonify({"status": "success", "source": source})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+@app.route('/api/status')
+def status():
+    return jsonify({
+        "status": "online",
+        "uptime": "TODO", 
+        "fps": 0 # We could track global fps
+    })
 
 if __name__ == "__main__":
     # Start frame capture thread
     t = threading.Thread(target=capture_frames, daemon=True)
     t.start()
 
-    # Start Flask server
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    # Start Flask-SocketIO server
+    # Note: socketio.run handles the web server
+    print("🚀 Starting Smart Passenger Counter Server on http://localhost:5000")
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False)

@@ -1,4 +1,11 @@
+import sys
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from flask import Flask, Response, jsonify, request, render_template
+
 from websocket_manager import socketio, send_realtime_update
 from core.input_reader import InputReader
 from core.detection_tracker import DetectionTracker
